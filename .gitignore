@@ -2,3 +2,5 @@
 *.class
 *.xml
 *.properties
+*.classpath
+*.project
