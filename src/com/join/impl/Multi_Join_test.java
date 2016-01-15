@@ -1,4 +1,5 @@
 package com.join.impl;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -51,14 +52,30 @@ public class Multi_Join_test extends Configured implements Tool {
             // 处理user.txt数据
             if (filePath.contains(a)) {
                 if (values.length < 2)  return;
-                System.out.println(values[1]);
-                context.write(new Text(values[0]), new Text("u#" + values[1]));
+                //System.out.println(values[1]);
+                String Key_a= values[a_1];
+                String Value_a="";
+                for(int i=0;i<values.length;i++)
+                {
+                	if (i != a_1)
+                	Value_a+=values[i]+DELIMITER;           		
+                }
+                Value_a=Value_a.trim();
+                context.write(new Text(Key_a), new Text("u#" + Value_a));
             }
             // 处理login_logs.txt数据
             else if (filePath.contains(b)) {
                 if (values.length < 3)  return;
-       //System.out.println(values[2]);               
-                context.write(new Text(values[0]), new Text("l#" + values[1] + DELIMITER + values[2]));
+       //System.out.println(values[2]);             
+                String Key_b= values[b_1];
+                String Value_b="";
+                for(int i=0;i<values.length;i++)
+                {
+                	if (i != b_1)
+                	Value_b+=values[i]+DELIMITER;           		
+                }
+                Value_b=Value_b.trim();
+                context.write(new Text(Key_b), new Text("l#" + Value_b));
             }
         }
     }
@@ -83,7 +100,7 @@ public class Multi_Join_test extends Configured implements Tool {
               
             for (String u : linkU) {
                 for (String l : linkL) {
-                    context.write(key, new Text(u + DELIMITER + l));
+                    context.write(key, new Text(l + DELIMITER + u));
                 }
             }
         }
@@ -118,8 +135,8 @@ public class Multi_Join_test extends Configured implements Tool {
 
 		// 设置输入和输出目录
 
-	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+'/'+args[0]));
-	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+'/'+args[2]));
+	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[0]));
+	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[2]));
 	     FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
 
 	        return job.waitForCompletion(true) ? 0 : 1;

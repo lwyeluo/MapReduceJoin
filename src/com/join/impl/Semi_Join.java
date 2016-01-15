@@ -56,6 +56,9 @@ public class Semi_Join extends Configured implements Tool
 			  protected void setup(Context context) throws IOException, InterruptedException
 			        {
 			        	 BufferedReader in = null;  
+			        	 String keyCatch = context.getConfiguration().get("keyCatch");
+			         	int keyCatch_1 = Integer.parseInt(keyCatch);
+			         	String d = context.getConfiguration().get("d");
 			        	try  
 			            {  
 			                // 从当前作业中获取要缓存的文件  
@@ -64,14 +67,14 @@ public class Semi_Join extends Configured implements Tool
 			                for (URI path : paths)  
 			                { 
 			                	System.out.println(path.toString());
-			                    if (path.toString().contains("user"))  
+			                    if (path.toString().contains(d))  
 			                    {  
 			                        in = new BufferedReader(new FileReader(path.toString()));  
 			                        while (null != (userId = in.readLine()))  
 			                        {  
 			                            String[] splits = userId.split(DELIMITER);
 			                            if(splits.length < 2) continue;
-			                            userIds.add(splits[0]);
+			                            userIds.add(splits[ keyCatch_1]);
 			                        }  
 			                    }  
 			                }  
@@ -88,6 +91,13 @@ public class Semi_Join extends Configured implements Tool
         {
         	FileSplit split = (FileSplit) context.getInputSplit();
             String filePath = split.getPath().toString();
+            
+            String a = context.getConfiguration().get("a");
+        	String a1 = context.getConfiguration().get("a1");
+        	int a_1 = Integer.parseInt(a1);
+        	String b = context.getConfiguration().get("b");
+        	String b1 = context.getConfiguration().get("b1");
+        	int b_1 = Integer.parseInt(b1);
             // 获取记录字符串
             String line = value.toString();
       //      System.out.println(userIds);
@@ -95,21 +105,45 @@ public class Semi_Join extends Configured implements Tool
             // 抛弃空记录
             if (line == null || line.trim().equals("")) return;
             String[] values = line.split(DELIMITER);
-            // 在map阶段过滤掉不需要的数据
-            if(userIds.contains( values[0]))
-            {
-            if (filePath.contains("user.txt")) {
+          
+        
+            
+            if (filePath.contains(a)) {
                 if (values.length < 2)  return;
-          //   System.out.println(values[1]);
-                context.write(new Text(values[0]), new Text("u#" + values[1]));
+                // 在map阶段过滤掉不需要的数据
+                if(userIds.contains( values[a_1]))
+                {
+                	  String Key_a= values[a_1];
+                      String Value_a="";
+                      for(int i=0;i<values.length;i++)
+                      {
+                      	if (i != a_1)
+                      	Value_a+=values[i]+DELIMITER;           		
+                      }
+                      Value_a=Value_a.trim();
+                      context.write(new Text(Key_a), new Text("u#" + Value_a));
+                }
+        
             }
             // 处理login_logs.txt数据
-            else if (filePath.contains("login_logs.txt")) {
-                if (values.length < 3)  return;
-       //System.out.println(values[2]);               
-                context.write(new Text(values[0]), new Text("l#" + values[1] + DELIMITER + values[2]));
+            else if (filePath.contains(b)) {
+                if (values.length < 2)  return;
+                // 在map阶段过滤掉不需要的数据
+                if(userIds.contains( values[b_1]))
+                {
+                	 String Key_b= values[b_1];
+                     String Value_b="";
+                     for(int i=0;i<values.length;i++)
+                     {
+                     	if (i != b_1)
+                     	Value_b+=values[i]+DELIMITER;           		
+                     }
+                     Value_b=Value_b.trim();
+                     context.write(new Text(Key_b), new Text("l#" + Value_b));
+                }
+                
             }
-            }
+            
        
         }
 
@@ -146,7 +180,7 @@ public class Semi_Join extends Configured implements Tool
     public int run(String[] args) throws Exception
     {
     	   Configuration conf=new Configuration();        
-    	String[] otherArgs = new String[]{"*.txt","output3","user.txt"}; 
+    	String[] otherArgs = new String[]{"input3","output3","user.txt"}; 
     	   if (otherArgs.length!=3) {
                System.err.println("Usage:invertedindex<in><out>");
                System.exit(2);
@@ -156,6 +190,25 @@ public class Semi_Join extends Configured implements Tool
            Path outputPath = new Path(otherArgs[1]);
            outputPath.getFileSystem(conf).delete(outputPath, true);
     	
+           //需要加载的小表
+           otherArgs[2] =args[7];
+   	    	String keyCatch="";
+           	if(args[0].equals(args[7]))
+           	{
+           		keyCatch=args[1];
+           	}
+           	else if(args[2].equals(args[7]))
+           	{
+           		keyCatch=args[3];
+           	}     	
+            conf.set("a",args[0]);
+  		  	conf.set("a1",args[1]);
+  		  	conf.set("b",args[2]);
+  		  	conf.set("b1",args[3]);
+       		  conf.set("keyCatch",keyCatch);
+       		  conf.set("d",args[7]);
+           
+           
         Job job = Job.getInstance(getConf(), "Semi_Join");
         
         job.setJobName("Semi_Join");

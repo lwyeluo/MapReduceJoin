@@ -26,6 +26,12 @@ public class Repartition_Join {
 
             FileSplit split = (FileSplit) context.getInputSplit();
             String filePath = split.getPath().toString();
+        	String a = context.getConfiguration().get("a");
+        	String a1 = context.getConfiguration().get("a1");
+        	int a_1 = Integer.parseInt(a1);
+        	String b = context.getConfiguration().get("b");
+        	String b1 = context.getConfiguration().get("b1");
+        	int b_1 = Integer.parseInt(b1);
             // 获取记录字符串
             String line = value.toString();
             //System.out.println(line);
@@ -34,16 +40,32 @@ public class Repartition_Join {
 
             String[] values = line.split(DELIMITER);
             // 处理user.txt数据
-            if (filePath.contains("user.txt")) {
+            if (filePath.contains(a)) {
                 if (values.length < 2)  return;
                 System.out.println(values[1]);
-                context.write(new Text(values[0]), new Text("u#" + values[1]));
+                String Key_a= values[a_1];
+                String Value_a="";
+                for(int i=0;i<values.length;i++)
+                {
+                	if (i != a_1)
+                	Value_a+=values[i]+DELIMITER;           		
+                }
+                Value_a=Value_a.trim();
+                context.write(new Text(Key_a), new Text("u#" + Value_a));
             }
             // 处理login_logs.txt数据
-            else if (filePath.contains("login_logs.txt")) {
-                if (values.length < 3)  return;
-       //System.out.println(values[2]);               
-                context.write(new Text(values[0]), new Text("l#" + values[1] + DELIMITER + values[2]));
+            else if (filePath.contains(b)) {
+                if (values.length < 2)  return;
+       //System.out.println(values[2]);             
+                String Key_b= values[b_1];
+                String Value_b="";
+                for(int i=0;i<values.length;i++)
+                {
+                	if (i != b_1)
+                	Value_b+=values[i]+DELIMITER;           		
+                }
+                Value_b=Value_b.trim();
+                context.write(new Text(Key_b), new Text("l#" + Value_b));
             }
         }
     }
@@ -75,9 +97,13 @@ public class Repartition_Join {
     }
 
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
+    public int run(String[] args)throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
    //     System.setProperty("hadoop.home.dir", "D:\\desktop\\hadoop-2.6.0");
         Configuration conf=new Configuration();     
+        conf.set("a",args[0]);
+		  conf.set("a1",args[1]);
+		  conf.set("b",args[2]);
+		  conf.set("b1",args[3]);
         String[] otherArgs=new String[]{"input3","output3"}; 
         if (otherArgs.length!=2) {
             System.err.println("Usage:invertedindex<in><out>");
@@ -93,15 +119,17 @@ public class Repartition_Join {
         job.setReducerClass(MyReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+        FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[0]));
+	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[2]));
         FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
  
         long startTime = System.currentTimeMillis();
-        if (job.waitForCompletion(true))
-        {
-        	System.out.println("用时为"+(System.currentTimeMillis()-startTime));
-        	System.exit(1);
-        }
+        return job.waitForCompletion(true) ? 0 : 1;
+//        if (job.waitForCompletion(true))
+//        {
+//        	System.out.println("用时为"+(System.currentTimeMillis()-startTime));
+//        	System.exit(1);
+//        }
     }
 
 
