@@ -1,0 +1,1 @@
+/usr/local/hadoop/tmp/mapred/local/1453011600494/user.txt

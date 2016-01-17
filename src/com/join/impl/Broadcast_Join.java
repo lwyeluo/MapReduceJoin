@@ -97,6 +97,7 @@ public class Broadcast_Join extends Configured implements Tool {
             	if(values.length < 2) return;
             String name = userMaps.get(values[keyIn_1]);
             Text t_key = new Text(values[keyIn_1]);
+            if(name==null) return; 
             String[] tmp= name.split(DELIMITER);
             if(tmp.length<2)
             {
@@ -133,7 +134,7 @@ public class Broadcast_Join extends Configured implements Tool {
     public int run(String[] args)  throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
     //    System.setProperty("hadoop.home.dir", "D:\\desktop\\hadoop-2.6.0");
         Configuration conf=new Configuration();
-        String[] otherArgs=new String[]{"input3","output3",""}; 
+        String[] otherArgs=new String[]{"input","output1"}; 
         
         //每次运行前删除输出目录    
         Path outputPath = new Path(otherArgs[1]);
@@ -141,27 +142,15 @@ public class Broadcast_Join extends Configured implements Tool {
         //添加分布式缓存文件 可以在map或reduce中直接通过users.txt链接访问对应缓存文件
   
         //需要加载的小表
-        otherArgs[2] =args[7];
+      
          
-	    	String fileIn="";
-	    	String keyIn="";
-	    	String keyCatch="";
-        	if(args[0].equals(args[7]))
-        	{
-        		fileIn=args[2];
-        		keyIn=args[3];
-        		keyCatch=args[1];
-        	}
-        	else if(args[2].equals(args[7]))
-        	{
-        		fileIn=args[0];
-        		keyIn=args[1];
-        		keyCatch=args[3];
-        	}     	
+	    	String fileIn=args[2];
+	    	String keyIn=args[3];
+	    	String keyCatch=args[1];
         	  conf.set("fileIn",fileIn);
     		  conf.set("keyIn",keyIn);
-    		  conf.set("keyCatch",keyCatch);
-    		  conf.set("d",args[7]);
+    		  conf.set("keyCatch",keyCatch);	  
+    		  conf.set("d",args[0]);
         Job job = Job.getInstance(conf, "Broadcast_Join");
         job.setJarByClass(Broadcast_Join.class);
         job.setMapperClass(MyMappper.class);
@@ -169,9 +158,9 @@ public class Broadcast_Join extends Configured implements Tool {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        job.addCacheFile(new URI(otherArgs[2]));
+        job.addCacheFile(new URI(args[0]));
         FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[0]));
-	     FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[2]));
+	    FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[2]));
         FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
         return job.waitForCompletion(true) ? 0 : 1;
 //        long startTime = System.currentTimeMillis();

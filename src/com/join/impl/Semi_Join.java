@@ -53,13 +53,13 @@ public class Semi_Join extends Configured implements Tool
 
         // 此方法会在map方法执行之前执行
         @Override
-			  protected void setup(Context context) throws IOException, InterruptedException
+        protected void setup(Mapper<LongWritable,Text,Text,Text>.Context context) throws IOException ,InterruptedException 
 			        {
-			        	 BufferedReader in = null;  
-			        	 String keyCatch = context.getConfiguration().get("keyCatch");
-			         	int keyCatch_1 = Integer.parseInt(keyCatch);
-			         	String d = context.getConfiguration().get("d");
-			        	try  
+        	BufferedReader in = null; 
+        	String keyCatch = context.getConfiguration().get("keyCatch");
+        	int keyCatch_1 = Integer.parseInt(keyCatch);
+        	String d = context.getConfiguration().get("d");
+        	try  
 			            {  
 			                // 从当前作业中获取要缓存的文件  
 			        		 URI[] paths = Job.getInstance(context.getConfiguration()).getCacheFiles();
@@ -83,12 +83,10 @@ public class Semi_Join extends Configured implements Tool
 			            {  
 			                e.printStackTrace();  
 			            }  
-			            }  
+			            };
 			        
 
-        public void map(LongWritable key, Text value, Context context)
-            throws IOException, InterruptedException
-        {
+        protected void map(LongWritable key, Text value, Mapper<LongWritable, Text, Text, Text>.Context context) throws IOException, InterruptedException {
         	FileSplit split = (FileSplit) context.getInputSplit();
             String filePath = split.getPath().toString();
             
@@ -105,9 +103,6 @@ public class Semi_Join extends Configured implements Tool
             // 抛弃空记录
             if (line == null || line.trim().equals("")) return;
             String[] values = line.split(DELIMITER);
-          
-        
-            
             if (filePath.contains(a)) {
                 if (values.length < 2)  return;
                 // 在map阶段过滤掉不需要的数据
@@ -177,66 +172,50 @@ public class Semi_Join extends Configured implements Tool
         
     }
     
-    public int run(String[] args) throws Exception
+    public int run(String[] args)  throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException 
     {
     	   Configuration conf=new Configuration();        
-    	String[] otherArgs = new String[]{"input3","output3","user.txt"}; 
-    	   if (otherArgs.length!=3) {
-               System.err.println("Usage:invertedindex<in><out>");
-               System.exit(2);
-           }   
+    	   String[] otherArgs = new String[]{"input","output1"}; 
+ 
     	//每次运行前删除输出目录    
-        
-           Path outputPath = new Path(otherArgs[1]);
+    	   Path outputPath = new Path(otherArgs[1]);
            outputPath.getFileSystem(conf).delete(outputPath, true);
-    	
            //需要加载的小表
-           otherArgs[2] =args[7];
    	    	String keyCatch="";
-           	if(args[0].equals(args[7]))
-           	{
-           		keyCatch=args[1];
-           	}
-           	else if(args[2].equals(args[7]))
-           	{
-           		keyCatch=args[3];
-           	}     	
-            conf.set("a",args[0]);
+   	    	keyCatch=args[1];
+   	    	conf.set("a",args[0]);
   		  	conf.set("a1",args[1]);
   		  	conf.set("b",args[2]);
   		  	conf.set("b1",args[3]);
-       		  conf.set("keyCatch",keyCatch);
-       		  conf.set("d",args[7]);
+       		conf.set("keyCatch",keyCatch);
+       		conf.set("d",args[0]);
            
-           
-        Job job = Job.getInstance(getConf(), "Semi_Join");
-        
+       	Job job = Job.getInstance(conf, "Semi_Join");
         job.setJobName("Semi_Join");
         job.setJarByClass(Semi_Join.class);
         job.setMapperClass(MapClass.class);
         job.setReducerClass(Reduce.class);
-
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
-
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-
-     
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
         // 我们把第一个参数的地址作为要缓存的文件路径
-        job.addCacheFile(new URI(otherArgs[2]));
-        FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+        job.addCacheFile(new URI(args[0]));
+        FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[0]));
+	    FileInputFormat.addInputPath(job, new Path(otherArgs[0]+"/" + args[2]));
         FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
 
         return job.waitForCompletion(true) ? 0 : 1;
     }
 
-    public static void main(String[] args) throws Exception
-    {
-    	   long startTime = System.currentTimeMillis();
-    	int res = ToolRunner.run(new Configuration(), new Semi_Join(), args);  
-    	System.out.println("用时为"+(System.currentTimeMillis()-startTime));
-        System.exit(res);
-    }
+//    public static void main(String[] args) throws Exception
+//    {
+//    	   long startTime = System.currentTimeMillis();
+//    	int res = ToolRunner.run(new Configuration(), new Semi_Join(), args);  
+//    	System.out.println("用时为"+(System.currentTimeMillis()-startTime));
+//        System.exit(res);
+//    }
 
 }

@@ -106,7 +106,7 @@ public class Repartition_Join extends Configured implements Tool{
 		  conf.set("a1",args[1]);
 		  conf.set("b",args[2]);
 		  conf.set("b1",args[3]);
-        String[] otherArgs=new String[]{"input3","output3"}; 
+        String[] otherArgs=new String[]{"input","output2"}; 
         if (otherArgs.length!=2) {
             System.err.println("Usage:invertedindex<in><out>");
             System.exit(2);

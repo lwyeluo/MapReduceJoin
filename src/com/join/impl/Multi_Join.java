@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -25,10 +26,11 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 
-public class Multi_Join {
+public class Multi_Join extends Configured implements Tool {
 
 	 public static final String DELIMITER = "\t"; // 字段分隔符
 
@@ -42,11 +44,12 @@ public class Multi_Join {
 	        	int c_1 = Integer.parseInt(c1);
 	        	String b2 = context.getConfiguration().get("b2");
 	        	int b_2 = Integer.parseInt(b2);
+	        	System.out.println(b_2+" "+c_1);
 	            FileSplit split = (FileSplit) context.getInputSplit();
 	            String filePath = split.getPath().toString();
 	            // 获取记录字符串
 	            String line = value.toString();
-	            //System.out.println(line);
+	            System.out.println(line);
 	            // 抛弃空记录
 	            if (line == null || line.trim().equals("")) return;
 
@@ -111,7 +114,8 @@ public class Multi_Join {
 	    public int run(String[] args) throws Exception {
 		
 		 Configuration conf=new Configuration();     
-	        String[] otherArgs=new String[]{"input3","output3","output_tmp"}; 
+	        String[] otherArgs=new String[]{"input","output","output_tmp"}; 
+	        
 	          conf.set("b2",args[4]);
 			  conf.set("c",args[5]);
 			  conf.set("c1",args[6]);

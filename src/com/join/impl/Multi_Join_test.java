@@ -44,7 +44,7 @@ public class Multi_Join_test extends Configured implements Tool {
             String filePath = split.getPath().toString();
             // 获取记录字符串
             String line = value.toString();
-            //System.out.println(line);
+            System.out.println("Multi_Join: " + line);
             // 抛弃空记录
             if (line == null || line.trim().equals("")) return;
 
@@ -65,7 +65,7 @@ public class Multi_Join_test extends Configured implements Tool {
             }
             // 处理login_logs.txt数据
             else if (filePath.contains(b)) {
-                if (values.length < 3)  return;
+                if (values.length < 2)  return;
        //System.out.println(values[2]);             
                 String Key_b= values[b_1];
                 String Value_b="";
@@ -91,6 +91,7 @@ public class Multi_Join_test extends Configured implements Tool {
               
             for (Text tval : values) {
                 String val = tval.toString();  
+                System.out.println("val = " + val);
                 if(val.startsWith("u#")) {
                     linkU.add(val.substring(2));
                 } else if(val.startsWith("l#")) {
@@ -100,6 +101,7 @@ public class Multi_Join_test extends Configured implements Tool {
               
             for (String u : linkU) {
                 for (String l : linkL) {
+                	System.out.println(key + " :" +  l + DELIMITER + u);
                     context.write(key, new Text(l + DELIMITER + u));
                 }
             }
@@ -113,7 +115,7 @@ public class Multi_Join_test extends Configured implements Tool {
 		  conf.set("a1",args[1]);
 		  conf.set("b",args[2]);
 		  conf.set("b1",args[3]);
-	       String[] otherArgs=new String[]{"input3","output_tmp"}; 
+	       String[] otherArgs=new String[]{"input","output_tmp"}; 
 	        if (otherArgs.length!=2) {
 	            System.err.println("Usage:invertedindex<in><out>");
 	            System.exit(2);

@@ -9,10 +9,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.join.bean.Table;
 import com.join.impl.Broadcast_Join;
+import com.join.impl.Multi_Join;
 import com.join.impl.Repartition_Join;
 import com.join.impl.Semi_Join;
 import com.join.util.GlobalDefine;
@@ -20,9 +24,12 @@ import com.join.util.MetaDataService;
 
 public class ParseSQL {
 
-	private String TEST_SQL1 = "select a.id,b.name from a,b,c where a.id=b.id and b.name=c.name";
+	private String TEST_SQL1 = "select * from a,b,c where a.id=b.id and a.name=c.name";
 	private String TEST_SQL2 = "select a.id,b.name from a,b where a.id=b.id";
+	private String TEST_SQL3 = "select a1.id,b.name from a1,b where a1.id=b.id";
+	private String TEST_SQL4 = "select a2.id,b.name from a2,b where a2.id=b.id";
 	private HashMap<String, Table> tableMap = new HashMap<String, Table>();
+	
 	
 	private int small_file_index = GlobalDefine.FILE_SMALL_NOT_KNOW; 
 	
@@ -63,21 +70,35 @@ public class ParseSQL {
 	 * @return
 	 */
 	public int checkUseBroadcast(String[] args) {
-		File f1 = new File(GlobalDefine.DIRECTORY + args[0]);
-		File f2 = new File(GlobalDefine.DIRECTORY + args[2]);
-		assert(f1.exists() && f2.exists());
+		try {
+			System.out.println(GlobalDefine.DIRECTORY + args[0] + " "+GlobalDefine.DIRECTORY + args[2]);
 		
-		System.out.println("" + f1.length() + "<--->" + f2.length());
+			Configuration conf = new Configuration();
+		    FileSystem fs = FileSystem.get(conf);
+			Path path1 =new Path(GlobalDefine.DIRECTORY + args[0]);
+			Path path2 =new Path(GlobalDefine.DIRECTORY + args[2]);
+			FileStatus f1 =  fs.getFileStatus(path1);
+			FileStatus f2=  fs.getFileStatus(path2);
+		   // System.out.println("stat.getLen()"+f1.getLen());
+
+
 		
-		small_file_index = f1.length() > f2.length() ? GlobalDefine.FILE_B_IS_SMALL 
-				: GlobalDefine.FILE_A_IS_SMALL;
-		long small_size = f1.length() > f2.length() ? f2.length() : f1.length();
 		
-		if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.BROADCAST_MAX_SIZE)
-			return GlobalDefine.BROADCAST_JOIN;
 		
-		if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.SEMIJOIN_MAX_SIZE)
-			return GlobalDefine.SEMI_JOIN;
+			System.out.println("" + f1.getLen() + "<--->" + f2.getLen());
+		
+			small_file_index = f1.getLen() > f2.getLen() ? GlobalDefine.FILE_B_IS_SMALL 
+					: GlobalDefine.FILE_A_IS_SMALL;
+			long small_size = f1.getLen() > f2.getLen() ? f2.getLen() : f1.getLen();
+			
+			if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.BROADCAST_MAX_SIZE)
+				return GlobalDefine.BROADCAST_JOIN;
+			
+			if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.SEMIJOIN_MAX_SIZE)
+				return GlobalDefine.SEMI_JOIN;
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
 		
 		return GlobalDefine.REPATITION_JOIN;
 	}
@@ -153,6 +174,8 @@ public class ParseSQL {
 		if(param.length == 7)
 			param[5] = tableMap.get(param[5]).getPath();
 		
+		long startTime = System.currentTimeMillis();
+		int res=0;
 		//check size
 		if(param.length == 4) {
 			int ret = checkUseBroadcast(param);
@@ -167,8 +190,7 @@ public class ParseSQL {
 					param[i + 2] = tmp3;
 				}
 			}
-			long startTime = System.currentTimeMillis();
-			int res=0;
+			
 			if(ret == GlobalDefine.REPATITION_JOIN) {
 				System.out.println("\tREPATITION_JOIN");
 				try {
@@ -196,9 +218,18 @@ public class ParseSQL {
 					e.printStackTrace();
 				} 
 			}
-			System.out.println("用时为"+(System.currentTimeMillis()-startTime));
-	        System.exit(res);
+			
 		}
+		else {
+					System.out.println("MLUTI");
+					try {
+						res = ToolRunner.run(new Configuration(), new Multi_Join(), param);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
+		}
+		System.out.println("用时为"+(System.currentTimeMillis()-startTime));
 		//print param
 		System.out.print("INFO:param\n\t");
 		for(int i = 0; i < param.length; i ++)
@@ -221,7 +252,12 @@ public class ParseSQL {
 					parse(TEST_SQL1);
 				} else if(sql.equals("t2")) {
 					parse(TEST_SQL2);
-				} else {
+				}else if(sql.equals("t3")) {
+					parse(TEST_SQL3);
+				} else if(sql.equals("t4")) {
+					parse(TEST_SQL4);
+				}  
+				else {
 					parse(sql);
 				}
 			} catch (IOException e) {
