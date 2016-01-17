@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 
 
-public class Broadcast_Join {
+public class Broadcast_Join extends Configured implements Tool {
     public static final String DELIMITER = "\t"; // 字段分隔符
 
     static class MyMappper extends Mapper<LongWritable, Text, Text, Text> {

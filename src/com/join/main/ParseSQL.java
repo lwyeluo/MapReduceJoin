@@ -8,7 +8,14 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ToolRunner;
+
 import com.join.bean.Table;
+import com.join.impl.Broadcast_Join;
+import com.join.impl.Repartition_Join;
+import com.join.impl.Semi_Join;
+import com.join.util.GlobalDefine;
 import com.join.util.MetaDataService;
 
 public class ParseSQL {
@@ -17,9 +24,7 @@ public class ParseSQL {
 	private String TEST_SQL2 = "select a.id,b.name from a,b where a.id=b.id";
 	private HashMap<String, Table> tableMap = new HashMap<String, Table>();
 	
-	private int BROADCAST_OFFSET = 20; //1<<20 1M
-	private int BROADCAST_MAX_SIZE = 50; //50M
-	private String DIRECTORY = "src/"; //default directory
+	private int small_file_index = GlobalDefine.FILE_SMALL_NOT_KNOW; 
 	
 	public ParseSQL() {
 		MetaDataService metadataService = new MetaDataService();
@@ -56,24 +61,25 @@ public class ParseSQL {
 	 * @param args
 	 * a.path, a.keyindex, b.path, b.keyindex
 	 * @return
-	 * 0 : cannot
-	 * 1: a is small
-	 * 2: b is small
 	 */
 	public int checkUseBroadcast(String[] args) {
-		File f1 = new File(DIRECTORY + args[0]);
-		File f2 = new File(DIRECTORY + args[2]);
+		File f1 = new File(GlobalDefine.DIRECTORY + args[0]);
+		File f2 = new File(GlobalDefine.DIRECTORY + args[2]);
 		assert(f1.exists() && f2.exists());
 		
 		System.out.println("" + f1.length() + "<--->" + f2.length());
 		
-		if((f1.length() >> BROADCAST_OFFSET) < BROADCAST_MAX_SIZE)
-			return 1;
+		small_file_index = f1.length() > f2.length() ? GlobalDefine.FILE_B_IS_SMALL 
+				: GlobalDefine.FILE_A_IS_SMALL;
+		long small_size = f1.length() > f2.length() ? f2.length() : f1.length();
 		
-		if((f2.length() >> BROADCAST_OFFSET) < BROADCAST_MAX_SIZE)
-			return 2;
+		if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.BROADCAST_MAX_SIZE)
+			return GlobalDefine.BROADCAST_JOIN;
 		
-		return 0;
+		if((small_size >> GlobalDefine.BROADCAST_OFFSET) < GlobalDefine.SEMIJOIN_MAX_SIZE)
+			return GlobalDefine.SEMI_JOIN;
+		
+		return GlobalDefine.REPATITION_JOIN;
 	}
 	
 	public void parse(String sql) {
@@ -149,22 +155,49 @@ public class ParseSQL {
 		
 		//check size
 		if(param.length == 4) {
-			switch(checkUseBroadcast(param)) {
-			case 0:
-				System.out.println("\tcannot use braodcast");
-				break;
-			case 1: //a is small
+			int ret = checkUseBroadcast(param);
+			if(small_file_index == GlobalDefine.FILE_A_IS_SMALL) {
 				System.out.println("\ta is small");
-				break;
-			case 2: //b is small
+			}
+			else if(small_file_index == GlobalDefine.FILE_B_IS_SMALL) {
 				System.out.println("\tb is small...swap...");
 				for(int i = 0; i < 2; i ++) {
 					String tmp3 = param[i];
 					param[i] = param[i + 2];
 					param[i + 2] = tmp3;
 				}
-				break;
 			}
+			long startTime = System.currentTimeMillis();
+			int res=0;
+			if(ret == GlobalDefine.REPATITION_JOIN) {
+				System.out.println("\tREPATITION_JOIN");
+				try {
+					res = ToolRunner.run(new Configuration(), new Repartition_Join(), param);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}  
+			}
+			else if(ret == GlobalDefine.BROADCAST_JOIN) {
+				System.out.println("\tBROADCAST_JOIN");
+				try {
+					res = ToolRunner.run(new Configuration(), new Broadcast_Join(), param);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
+			}
+			else if(ret == GlobalDefine.SEMI_JOIN) {
+				System.out.println("\tSEMI_JOIN");
+				try {
+					res = ToolRunner.run(new Configuration(), new Semi_Join(), param);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
+			}
+			System.out.println("用时为"+(System.currentTimeMillis()-startTime));
+	        System.exit(res);
 		}
 		//print param
 		System.out.print("INFO:param\n\t");
